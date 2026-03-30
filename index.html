@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="description" content="制限時間6秒のスピードしりとりスコアアタックゲーム。ギリギリほど高得点！">
+<meta property="og:title" content="無限しりとり | SCORE ATTACK">
+<meta property="og:description" content="制限時間6秒のスピードしりとり！ギリギリほど高得点。コンボと長い単語でハイスコアを狙え！">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="無限しりとり | SCORE ATTACK">
+<meta name="twitter:description" content="制限時間6秒のスピードしりとり！ギリギリほど高得点。">
+<title>無限しりとり | SCORE ATTACK</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Dots&family=Noto+Sans+JP:wght@400;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#07070f;--sf:#111119;--sf2:#181825;
+  --ac:#00f5c8;--ac2:#ff3c6e;--ac3:#ffcc00;--ac4:#bf88ff;
+  --t:#eeeeff;--td:#7777aa;--bdr:rgba(0,245,200,.18);
+  --fg:'Zen Dots',cursive;--fb:'Noto Sans JP',sans-serif;
+}
+body{background:var(--bg);color:var(--t);font-family:var(--fb);
+  display:flex;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;}
+#app{width:100%;max-width:460px;min-height:100vh;position:relative;}
+.scr{display:none;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100vh;padding:28px 22px;position:relative;}
+.scr.on{display:flex;}
+.mute-btn{position:fixed;top:14px;right:16px;z-index:500;
+  background:var(--sf2);border:1px solid var(--bdr);border-radius:50%;
+  width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:17px;transition:background .15s,transform .1s;line-height:1;}
+.mute-btn:hover{background:var(--sf);transform:scale(1.1);}
+.mute-btn:active{transform:scale(.93);}
+#s-title{background:radial-gradient(ellipse at 50% 30%,#160828 0%,var(--bg) 65%);}
+.logo{font-family:var(--fg);font-size:clamp(36px,9.5vw,50px);color:var(--ac);
+  text-shadow:0 0 48px rgba(0,245,200,.45);letter-spacing:4px;text-align:center;
+  line-height:1.15;margin-bottom:8px;}
+.logo-sub{font-size:11px;color:var(--td);letter-spacing:5px;text-transform:uppercase;margin-bottom:26px;}
+.scanline{width:100%;max-width:280px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--ac),transparent);
+  margin-bottom:26px;animation:sc 2.2s ease-in-out infinite;}
+@keyframes sc{0%,100%{opacity:.25;transform:scaleX(.25);}50%{opacity:1;transform:scaleX(1);}}
+.snd-notice{display:flex;align-items:center;gap:8px;
+  background:rgba(0,245,200,.07);border:1px solid rgba(0,245,200,.18);
+  border-radius:10px;padding:9px 14px;margin-bottom:20px;width:100%;max-width:360px;}
+.snd-icon{font-size:16px;flex-shrink:0;}
+.snd-txt{font-size:12px;color:var(--td);line-height:1.5;}
+.snd-txt span{color:var(--ac);}
+.rules{background:var(--sf);border:1px solid var(--bdr);border-radius:16px;
+  padding:20px 22px;width:100%;max-width:360px;margin-bottom:24px;}
+.r-hd{font-size:11px;letter-spacing:3px;color:var(--ac);text-transform:uppercase;margin-bottom:14px;}
+.r-row{display:flex;gap:10px;font-size:13px;color:var(--td);
+  margin-bottom:10px;line-height:1.55;align-items:flex-start;}
+.r-row:last-child{margin-bottom:0;}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--ac);flex-shrink:0;margin-top:5px;}
+.hl{color:var(--ac);}.hl2{color:var(--ac3);}.hl3{color:var(--ac4);}
+.btn-start{font-family:var(--fg);font-size:18px;color:var(--bg);background:var(--ac);
+  border:none;border-radius:13px;padding:16px 52px;cursor:pointer;letter-spacing:2px;
+  transition:transform .12s,box-shadow .12s;box-shadow:0 0 28px rgba(0,245,200,.38);margin-bottom:12px;}
+.btn-start:hover{transform:scale(1.04);box-shadow:0 0 48px rgba(0,245,200,.6);}
+.btn-start:active{transform:scale(.96);}
+.hint{font-size:11px;color:var(--td);text-align:center;line-height:1.6;}
+#s-cd{background:radial-gradient(ellipse at 50% 38%,#160828 0%,var(--bg) 68%);}
+.cd-n{font-family:var(--fg);font-size:clamp(110px,30vw,150px);color:var(--ac);
+  text-shadow:0 0 70px rgba(0,245,200,.7);line-height:1;}
+.cd-n.pop{animation:cdpop .75s ease-out;}
+@keyframes cdpop{0%{transform:scale(1.5);opacity:0;}55%{transform:scale(.92);}100%{transform:scale(1);opacity:1;}}
+.cd-txt{font-size:13px;color:var(--td);letter-spacing:3px;text-transform:uppercase;margin-top:18px;}
+.cd-fc{margin-top:28px;font-size:14px;color:var(--td);letter-spacing:1px;}
+.cd-fc span{color:var(--ac);font-family:var(--fg);font-size:32px;display:inline-block;margin-left:6px;vertical-align:middle;}
+#s-game{background:var(--bg);justify-content:flex-start;padding-top:18px;}
+.g-hdr{width:100%;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.g-box{display:flex;flex-direction:column;}
+.g-box.r{align-items:flex-end;}
+.g-lbl{font-size:9px;letter-spacing:2.5px;color:var(--td);text-transform:uppercase;margin-bottom:2px;}
+.g-score{font-family:var(--fg);font-size:clamp(28px,7.5vw,36px);color:var(--ac3);line-height:1;}
+.g-combo{font-family:var(--fg);font-size:clamp(28px,7.5vw,36px);color:var(--ac2);line-height:1;}
+.g-combo.pop{animation:cpop .28s ease-out;}
+@keyframes cpop{0%{transform:scale(1);}45%{transform:scale(1.65);color:#fff;}100%{transform:scale(1);}}
+.tmr-wrap{width:100%;height:9px;background:var(--sf2);border-radius:5px;overflow:hidden;margin-bottom:5px;}
+.tmr-bar{height:100%;border-radius:5px;transition:width .07s linear,background .25s;}
+.tmr-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+.tmr-sec{font-family:var(--fg);font-size:13px;color:var(--td);}
+.tmr-sec.w{color:var(--ac3);}.tmr-sec.d{color:var(--ac2);}
+.gg-wrap{width:100%;margin-bottom:20px;}
+.gg-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.gg-title{font-size:9px;letter-spacing:2.5px;color:var(--td);text-transform:uppercase;}
+.gg-mult{font-family:var(--fg);font-size:14px;color:var(--ac4);transition:color .2s;}
+.gg-bg{width:100%;height:6px;background:var(--sf2);border-radius:3px;overflow:hidden;}
+.gg-bar{height:100%;border-radius:3px;transition:width .07s linear;}
+.char-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:12px;}
+.char-lbl{font-size:9px;letter-spacing:3px;color:var(--td);text-transform:uppercase;margin-bottom:6px;}
+.cur-char{font-family:var(--fg);font-size:clamp(80px,21vw,104px);color:var(--ac);
+  text-shadow:0 0 55px rgba(0,245,200,.55);line-height:1;}
+.cur-char.changed{animation:chpop .22s ease-out;}
+@keyframes chpop{0%{transform:scale(.5);opacity:.3;}55%{transform:scale(1.2);}100%{transform:scale(1);opacity:1;}}
+.last-word{font-size:13px;color:var(--td);text-align:center;min-height:18px;margin-bottom:5px;}
+.last-word span{color:var(--t);}
+.status-row{font-size:12px;text-align:center;min-height:17px;margin-bottom:5px;}
+.status-row.checking{color:var(--ac3);animation:blink .55s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.35;}}
+.status-row.err{color:var(--ac2);animation:fadein .15s ease-out;}
+@keyframes fadein{from{opacity:0;transform:translateY(-3px);}to{opacity:1;transform:translateY(0);}}
+.inp-wrap{width:100%;position:relative;margin-bottom:6px;}
+.fb-pop{position:absolute;top:-44px;left:50%;transform:translateX(-50%);
+  font-family:var(--fg);font-size:20px;pointer-events:none;white-space:nowrap;z-index:10;}
+.fb-pop.show{animation:fbfly .9s ease-out forwards;}
+@keyframes fbfly{0%{opacity:0;transform:translateX(-50%) translateY(0) scale(.4);}
+  18%{opacity:1;transform:translateX(-50%) translateY(-10px) scale(1.15);}
+  75%{opacity:1;transform:translateX(-50%) translateY(-22px) scale(1);}
+  100%{opacity:0;transform:translateX(-50%) translateY(-40px) scale(.88);}}
+.fb-gg{color:var(--ac4);}.fb-long{color:var(--ac3);}.fb-nice{color:var(--ac);}
+.word-inp{width:100%;background:var(--sf2);border:2px solid var(--bdr);border-radius:13px;
+  padding:15px 18px;font-size:clamp(20px,5.5vw,26px);font-family:var(--fb);color:var(--t);
+  text-align:center;outline:none;transition:border-color .12s,box-shadow .12s;-webkit-appearance:none;}
+.word-inp:focus{border-color:var(--ac);box-shadow:0 0 22px rgba(0,245,200,.14);}
+.word-inp::placeholder{color:var(--td);font-size:14px;}
+.word-inp.shake{animation:shake .3s ease-out;border-color:var(--ac2)!important;}
+@keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-8px);}40%{transform:translateX(8px);}60%{transform:translateX(-5px);}80%{transform:translateX(5px);}}
+.inp-hint{font-size:11px;color:var(--td);text-align:center;margin-top:7px;letter-spacing:.5px;}
+.len-row{display:flex;gap:5px;justify-content:center;align-items:center;margin-top:12px;}
+.ld{width:9px;height:9px;border-radius:50%;background:var(--sf2);border:1px solid rgba(255,255,255,.08);transition:background .15s,box-shadow .15s;}
+.ld.l1{background:var(--ac);box-shadow:0 0 7px var(--ac);}
+.ld.l2{background:var(--ac3);box-shadow:0 0 7px var(--ac3);}
+.ld.l3{background:var(--ac4);box-shadow:0 0 8px var(--ac4);}
+.len-lbl{font-size:11px;color:var(--td);text-align:center;margin-top:5px;min-height:15px;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:14px;max-height:56px;overflow:hidden;}
+.chip{font-size:12px;padding:3px 11px;border-radius:20px;background:var(--sf2);color:var(--td);border:1px solid rgba(255,255,255,.05);}
+.chip.new{border-color:var(--ac);color:var(--ac);animation:chipin .25s ease-out;}
+@keyframes chipin{from{transform:scale(0);opacity:0;}to{transform:scale(1);opacity:1;}}
+.chip.dead{border-color:var(--ac2);color:var(--ac2);}
+.ptcl{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50;}
+.milestone{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:var(--fg);font-size:clamp(22px,6vw,30px);pointer-events:none;z-index:200;
+  white-space:nowrap;display:none;}
+.milestone.show{display:block;animation:msb 1.15s ease-out forwards;}
+@keyframes msb{0%{opacity:0;transform:translate(-50%,-50%) scale(.45);}
+  18%{opacity:1;transform:translate(-50%,-50%) scale(1.28);}
+  55%{opacity:1;transform:translate(-50%,-50%) scale(1);}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(.92);}}
+#app.shake{animation:scrshake .36s ease-out;}
+@keyframes scrshake{0%,100%{transform:translate(0,0);}15%{transform:translate(-6px,3px);}30%{transform:translate(5px,-4px);}50%{transform:translate(-4px,5px);}70%{transform:translate(4px,-2px);}88%{transform:translate(-2px,3px);}}
+#s-result{background:radial-gradient(ellipse at 50% 28%,#160828 0%,var(--bg) 70%);}
+.res-ttl{font-family:var(--fg);font-size:14px;letter-spacing:5px;color:var(--td);text-transform:uppercase;margin-bottom:8px;z-index:1;}
+.res-reason{font-size:15px;color:var(--ac2);margin-bottom:26px;text-align:center;z-index:1;}
+.res-sv{display:flex;flex-direction:column;align-items:center;margin-bottom:8px;z-index:1;}
+.res-slbl{font-size:11px;letter-spacing:3px;color:var(--td);text-transform:uppercase;margin-bottom:4px;}
+.res-sval{font-family:var(--fg);font-size:clamp(68px,18vw,94px);color:var(--ac3);
+  text-shadow:0 0 48px rgba(255,204,0,.48);line-height:1;animation:srev .5s cubic-bezier(.175,.885,.32,1.275);}
+@keyframes srev{from{opacity:0;transform:scale(.6);}to{opacity:1;transform:scale(1);}}
+.res-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%;max-width:380px;margin:20px 0;z-index:1;}
+.stat-c{background:var(--sf);border:1px solid var(--bdr);border-radius:13px;padding:14px 8px;text-align:center;}
+.stat-lbl{font-size:9px;letter-spacing:2px;color:var(--td);text-transform:uppercase;margin-bottom:5px;}
+.stat-val{font-family:var(--fg);font-size:26px;color:var(--ac2);}
+.res-btns{display:flex;flex-direction:column;gap:11px;width:100%;max-width:360px;z-index:1;}
+.btn-retry{font-family:var(--fg);font-size:16px;color:var(--bg);background:var(--ac);border:none;
+  border-radius:13px;padding:17px;cursor:pointer;letter-spacing:3px;transition:transform .12s,box-shadow .12s;
+  box-shadow:0 0 24px rgba(0,245,200,.33);}
+.btn-retry:hover{transform:scale(1.03);}.btn-retry:active{transform:scale(.96);}
+.btn-share{font-family:var(--fg);font-size:16px;color:#fff;background:#1d9bf0;border:none;
+  border-radius:13px;padding:17px;cursor:pointer;letter-spacing:1px;
+  transition:transform .12s,filter .12s;display:flex;align-items:center;justify-content:center;gap:9px;}
+.btn-share:hover{transform:scale(1.03);filter:brightness(1.12);}.btn-share:active{transform:scale(.96);}
+</style>
+</head>
+<body>
+<canvas class="ptcl" id="ptcl"></canvas>
+<button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="ミュート切り替え">🔊</button>
+<div id="app">
+<div class="scr on" id="s-title">
+  <div class="logo">無限しりとり</div>
+  <p class="logo-sub">SCORE ATTACK</p>
+  <div class="scanline"></div>
+  <div class="snd-notice">
+    <span class="snd-icon">🔊</span>
+    <span class="snd-txt">このゲームは<span>効果音</span>が鳴ります。右上のボタンでミュートできます。</span>
+  </div>
+  <div class="rules">
+    <p class="r-hd">HOW TO PLAY</p>
+    <div class="r-row"><div class="dot"></div><span>前の単語の最後の文字から始まる<span class="hl">実在する言葉</span>を入力する</span></div>
+    <div class="r-row"><div class="dot"></div><span>制限時間は<span class="hl">6秒</span>。<span class="hl2">ギリギリ</span>に答えるほど高得点！</span></div>
+    <div class="r-row"><div class="dot"></div><span><span class="hl3">長い単語</span>ほどボーナス大（4文字〜で加点）</span></div>
+    <div class="r-row"><div class="dot"></div><span>コンボが続くとスコア倍率アップ（5・10・20）</span></div>
+    <div class="r-row"><div class="dot"></div><span>「ん」で終わる・時間切れでゲームオーバー</span></div>
+  </div>
+  <button class="btn-start" onclick="goCountdown()">START</button>
+  <p class="hint">ひらがなで入力（辞書チェックあり）</p>
+</div>
+<div class="scr" id="s-cd">
+  <div class="cd-n" id="cd-n">3</div>
+  <p class="cd-txt">GET READY</p>
+  <p class="cd-fc">最初の文字：<span id="cd-fc-c">?</span></p>
+</div>
+<div class="scr" id="s-game">
+  <div class="g-hdr">
+    <div class="g-box"><span class="g-lbl">SCORE</span><span class="g-score" id="g-score">0</span></div>
+    <div class="g-box r"><span class="g-lbl">COMBO</span><span class="g-combo" id="g-combo">0</span></div>
+  </div>
+  <div class="tmr-wrap"><div class="tmr-bar" id="tmr-bar" style="width:100%;background:var(--ac);"></div></div>
+  <div class="tmr-row">
+    <span class="tmr-sec" id="tmr-sec">6.0</span>
+    <span style="font-size:10px;color:var(--td);letter-spacing:1px;">TIME</span>
+  </div>
+  <div class="gg-wrap">
+    <div class="gg-hd"><span class="gg-title">GIRIGIRI BONUS</span><span class="gg-mult" id="gg-mult">×1.0</span></div>
+    <div class="gg-bg"><div class="gg-bar" id="gg-bar" style="width:0%;"></div></div>
+  </div>
+  <div class="char-wrap">
+    <p class="char-lbl">NEXT START</p>
+    <p class="cur-char" id="cur-char">ー</p>
+  </div>
+  <p class="last-word" id="last-word">最初の単語を入力してください</p>
+  <div class="status-row" id="status-row"></div>
+  <div class="inp-wrap">
+    <span class="fb-pop" id="fb-pop"></span>
+    <input type="text" class="word-inp" id="word-inp"
+      placeholder="ひらがなで入力…"
+      autocomplete="off" autocorrect="off" spellcheck="false" inputmode="hiragana"
+      onkeydown="handleKey(event)" oninput="handleInput(event)">
+  </div>
+  <p class="inp-hint">Enter で確定</p>
+  <div class="len-row" id="len-row"></div>
+  <p class="len-lbl" id="len-lbl"></p>
+  <div class="chips" id="chips"></div>
+</div>
+<div class="scr" id="s-result">
+  <p class="res-ttl">GAME OVER</p>
+  <p class="res-reason" id="res-reason">時間切れ</p>
+  <div class="res-sv">
+    <p class="res-slbl">FINAL SCORE</p>
+    <p class="res-sval" id="res-score">0</p>
+  </div>
+  <div class="res-stats">
+    <div class="stat-c"><p class="stat-lbl">MAX COMBO</p><p class="stat-val" id="r-combo">0</p></div>
+    <div class="stat-c"><p class="stat-lbl">WORDS</p><p class="stat-val" id="r-words">0</p></div>
+    <div class="stat-c"><p class="stat-lbl">MAX LEN</p><p class="stat-val" id="r-maxlen">0</p></div>
+  </div>
+  <div class="res-btns">
+    <button class="btn-retry" onclick="goCountdown()">RETRY</button>
+    <button class="btn-share" onclick="doShare()">
+      <span style="font-size:18px;font-weight:900;">𝕏</span>ポスト
+    </button>
+  </div>
+</div>
+</div>
+<div class="milestone" id="milestone"></div>
+<script>
+let MUTED=false;
+function toggleMute(){MUTED=!MUTED;el('mute-btn').textContent=MUTED?'🔇':'🔊';try{localStorage.setItem('shiritori_mute',MUTED?'1':'0');}catch(e){}}
+let AC;
+function getAC(){if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC;}
+function playTone(freq,type,dur,vol,delay=0){if(MUTED)return;const ac=getAC(),t=ac.currentTime+delay,osc=ac.createOscillator(),g=ac.createGain();osc.connect(g);g.connect(ac.destination);osc.type=type;osc.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+0.012);g.gain.exponentialRampToValueAtTime(0.001,t+dur);osc.start(t);osc.stop(t+dur+0.02);}
+function seSuccess(c){const b=[523,659,784,1047],n=Math.min(c,4);for(let i=0;i<n+1;i++)playTone(b[i],'sine',0.18,0.22,i*0.055);}
+function seGirigiri(){[523,659,784,1047,1319].forEach((f,i)=>playTone(f,'sine',0.25,0.28,i*0.04));setTimeout(()=>playTone(1568,'sine',0.4,0.3),250);}
+function seLong(l){const s=[0,2,4,5,7,9,11,12];for(let i=0;i<Math.min(l-3,6);i++)playTone(440*Math.pow(2,s[i]/12)*2,'sine',0.2,0.2,i*0.05);}
+function seMilestone(lv){if(lv===1){[523,659,784].forEach((f,i)=>playTone(f,'sine',0.4,0.3,i*0.04));}else if(lv===2){[523,659,784,1047].forEach((f,i)=>playTone(f,'sine',0.45,0.32,i*0.04));setTimeout(()=>playTone(1319,'sine',0.5,0.35),140);}else{[523,659,784,1047,1319,1568].forEach((f,i)=>playTone(f,'sine',0.55,0.38,i*0.06));}}
+function seError(){playTone(200,'sawtooth',0.15,0.15);playTone(150,'sawtooth',0.15,0.12,0.1);}
+function seTickDanger(){playTone(440,'square',0.08,0.07);}
+function seGameOver(){[400,320,240,180].forEach((f,i)=>playTone(f,'sawtooth',0.35,0.2,i*0.12));}
+function seCountdown(n){if(n>0)playTone(660,'sine',0.18,0.25);else{playTone(880,'sine',0.12,0.3);playTone(1100,'sine',0.12,0.3,0.1);}}
+function seType(){playTone(800,'sine',0.04,0.06);}
+const CV=document.getElementById('ptcl'),CTX=CV.getContext('2d');let particles=[];
+function spawnPtcl(x,y,colors,count,speed){for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,sp=speed*(0.5+Math.random());particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-speed*0.4,r:Math.random()*4+2,c:colors[Math.floor(Math.random()*colors.length)],a:1,g:0.28+Math.random()*0.1});}}
+function spawnRing(x,y,color){for(let i=0;i<24;i++){const a=i/24*Math.PI*2;particles.push({x,y,vx:Math.cos(a)*8,vy:Math.sin(a)*8,r:3,c:color,a:1,g:0,ring:true});}}
+let ptRaf;
+function animPtcl(){CV.width=window.innerWidth;CV.height=window.innerHeight;CTX.clearRect(0,0,CV.width,CV.height);particles=particles.filter(p=>p.a>0.02);particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=p.g||0;p.a-=p.ring?0.035:0.022;if(p.ring)p.vx*=0.92;CTX.globalAlpha=Math.max(0,p.a);CTX.fillStyle=p.c;CTX.beginPath();CTX.arc(p.x,p.y,p.r,0,Math.PI*2);CTX.fill();});if(particles.length>0)ptRaf=requestAnimationFrame(animPtcl);else CTX.clearRect(0,0,CV.width,CV.height);}
+function burst(type){cancelAnimationFrame(ptRaf);const cx=window.innerWidth/2,cy=window.innerHeight*0.45;if(type==='success')spawnPtcl(cx,cy,['#00f5c8','#ffffff','#88ffee'],20,7);else if(type==='girigiri'){spawnPtcl(cx,cy,['#bf88ff','#ff3c6e','#ffcc00','#ffffff'],50,13);spawnRing(cx,cy,'#bf88ff');}else if(type==='long')spawnPtcl(cx,cy,['#ffcc00','#ffeeaa','#ffffff'],30,9);else if(type==='milestone'){spawnPtcl(cx,cy,['#00f5c8','#ff3c6e','#ffcc00','#bf88ff','#fff'],70,15);spawnRing(cx,cy,'#00f5c8');}else if(type==='gameover')spawnPtcl(cx,cy,['#ff3c6e','#ff8888','#ff0000'],60,10);animPtcl();}
+function flash(color,ms=120){const d=document.createElement('div');d.style.cssText=`position:fixed;inset:0;background:${color};opacity:.25;pointer-events:none;z-index:300;transition:opacity ${ms}ms ease-out;`;document.body.appendChild(d);requestAnimationFrame(()=>requestAnimationFrame(()=>d.style.opacity='0'));setTimeout(()=>d.remove(),ms+50);}
+const DICT_RAW=`あいさつ あいす あいどる あいにく あいびき あおぞら あかちゃん あかり あきかん あきらめ あくしゅ あくせく あけがた あけぼの あこがれ あさごはん あさって あさひ あしあと あじさい あずき あそこ あたりまえ あちこち あつかい あつまり あなぐま あなた あにき あのころ あばれる あびる あまぐも あまざけ あまぞん あまのがわ あまやどり あみもの あめんぼ あやまり あらし あらた あられ あるぱか あれこれ あわせる あんきも あんこう あんず あんない いかだ いかり いきもの いくじ いくら いけがき いこい いしかわ いずみ いたち いたどり いたり いちご いちばん いっぽ いてざ いとこ いなか いにしえ いのしし いのち いびき いぶき いほう いみ いもうと いわし いんこ いんさつ うえだ うかぶ うくれれ うごき うさぎ うじがわ うずまき うたがい うちわ うつぼ うてな うなぎ うなずき うにこーん うのはな うばぐるま うみがめ うめぼし うらない うれしさ うろこ うわさ えあわせ えいが えいご えがお えくぼ えさ えだまめ えびす えほん おいしさ おいる おうぎ おうさま おうち おおかみ おおぞら おかし おかゆ おきなわ おくびょう おこのみやき おさかな おさらい おしろ おすし おそば おたまじゃくし おちゃ おつきさま おでかけ おでん おとぎばなし おとこのこ おとしだま おどり おばあさん おはよう おひさま おみくじ おみやげ おもいで おもちゃ おもてなし おやすみ おらんうーたん かいがら かいぎ かいけつ かいさん かいさつ かいじゅう かいだん かいとう かいもの かがく かがみ かかし かき かくれんぼ かけっこ かごめ かさ かしわ かじか かじつ かすみ かぞく かたな かたつむり かちかち かながわ かにみそ かね かねもち かばん かびん かぶとむし かまくら かめ かもめ からかさ からし からす かりん かるた かれは かろうじて かわうそ かわかぜ かわず かわせみ かんがるー かんき かんけい きかんしゃ きぎ きくらげ きたろう きつね きのこ きびだんご きゃべつ きゅうり きらめき きりん きれいごと きんぎょ きんもくせい ぎんなん くいず くうき くえすちょん くさばな くじら くすのき くだもの くちぐせ くちばし くつした くどい くびわ くもり くらげ くるみ くわがた くんれん けいたい けがわ けしき けっかく けつあつ けねこ けもの けんか こいびと こうえん こうもり こがね こきゅう こごえ こざる こたつ こちょう こっとう こどもたち こなゆき こねこ こはく こびと こふん ごちそう こまどり こみち こもり こやぎ こやすず こらえる こりんず こんにゃく こんぺいとう さいかく さいころ さいはて さいほう さがりはな さくら さくらんぼ さけ さごじょう さじん さそり さながら さばく さびしさ さまよい さやえんどう さわがに さわやか さんごしょう さんしょう しいたけ しかく しかし しかのこ しきりなおし しきん しじみ しずく しぜん しちみ しっぽ しのぶ しぶがき しまうま しめじ しゃぼん しょうが じょうろ しらゆき しりとり しるこ しわ じんじゃ すいか すいせん すいそう すいとん すいり すがた すきやき すくなかず すずき すずしさ すずめ すだち すなば すのこ すばる すまい すみれ すもも すらすら すりこぎ すれちがい せいざ せいりつ せおい せかい せき せつない せみ せんべい そうじ そうめん そこなう そだち そのまま そばがき そぼろ そまつ そよかぜ そらまめ たいあたり たいこ たいよう たかとび たから たきび たくあん たこやき たぬき たびびと たましい たらこ たんけん たんぽぽ だいこん だいず ちかみち ちくわ ちごはやし ちちぶ ちちんぷいぷい ちのり ちはやぶる ちゃわん ちょうちょ ちょこ ちらし ちりとり つきあかり つきのわぐま つくし つくだに つばき つぶやき つみき つるかめ つるぎ つわもの てあみ てがかり てっぽう てぬぐい てまり てんぐ てんさい てんじん てんまど てんもく てんらんかい とうがらし とうふ とかげ とかち とこなつ とさか とそ とちおとめ とっておき とっくり とどけもの とにかく とびうお とびはね とまと とらんぷ とりかえしのつかない とりこ ながれぼし なかやまみほ なつかしい なつめ なのはな なまけもの なみだ なよたけ なりきん なわとび にがうり にくまん にじ にじます にしき にじんで にっこり にんじん にんにく ぬいぐるみ ぬかるみ ぬけがら ぬのきれ ねがい ねこじゃらし ねこまた ねずみ ねっこ ねっとり ねむり のこのこ のどか のりもの のんびり はかせ はぎ はくさい はくちょう はけ はさみ はじまり はすのはな はたけ はちみつ はっぱ はなびら はなみず はなれ はまなす はやぶさ はらっぱ はるかぜ はるさめ はれるや はわい ひがん ひかり ひきがえる ひきだし ひぐらし ひさし ひしもち ひたむき ひなまつり ひのき ひびき ひまわり ひょうたん ひらがな ひるがえる ひわ ふきのとう ふくろう ふたば ふたり ふなずし ふゆのそら ふりかけ ふろしき ぶどう ほたる ほっかいどう ほっとけーき ほとけさま ほのぼの ほのめかし ほやほや まがたま まごころ まさゆめ まつり まとめ まなつ まなぼ まほう まめだいふく まりも まるたんぼう まんじゅう みかん みずすまし みずたまり みずたんぼ みそしる みたらし みどり みなと みほん みやこ みやこどり みんな むかし むくどり むさし むしかご むしくい むすびめ むらさき めいさく めかぶ めだか めだまやき もぐら もちもち もみじ もも もものはな やぎ やきいも やきとり やきにく やきもの やけど やさしさ やまとなでしこ やまびこ やみよ やり ゆうがた ゆうすず ゆかた ゆきだるま ゆめ よあけ よこはま よしきり よつあみ よなよな らいちょう らくだ らっこ らっぱ られつ りすが りすく りゅう りょうり りりかる りんご るすばん るびー るり れいかん れたす れんこん れんそう ろうそく ろくでなし わかめ わかもの わにがわ わらびもち わるくち`;
+const DICT=new Set(DICT_RAW.trim().split(/\s+/));
+const wCache=new Map();
+async function checkDict(w){if(DICT.has(w))return true;if(wCache.has(w))return wCache.get(w);try{const r=await fetch(`https://ja.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(w)}&format=json&origin=*&redirects=1&prop=info`,{signal:AbortSignal.timeout(2500)});const d=await r.json();const pid=Object.keys(d.query?.pages??{})[0];const ok=pid!=='-1';wCache.set(w,ok);return ok;}catch{wCache.set(w,true);return true;}}
+const TURN_MS=6000,TICK_MS=55;
+const START_CHARS='あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわ'.split('');
+const SMALL={ぁ:'あ',ぃ:'い',ぅ:'う',ぇ:'え',ぉ:'お',っ:'つ',ゃ:'や',ゅ:'ゆ',ょ:'よ',ゎ:'わ'};
+let G={};
+function resetG(){G={score:0,combo:0,maxCombo:0,totalWords:0,maxLen:0,currentChar:null,usedWords:new Set(),recent:[],timerStart:0,timerInterval:null,active:false,firstChar:null,lastDangerTick:0,submitting:false};}
+resetG();
+function toHira(s){return s.replace(/[\u30A1-\u30F6]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).replace(/\s/g,'');}
+function isHira(s){return /^[\u3041-\u3096ー]+$/.test(s);}
+function lastChar(w){let i=w.length-1;while(i>=0&&w[i]==='ー')i--;if(i<0)return w[w.length-1];return SMALL[w[i]]??w[i];}
+function ggMult(e){const r=Math.min(1,e/TURN_MS);if(r<0.5)return 1.0;if(r<0.7)return 1+(r-0.5)/0.2*0.5;if(r<0.85)return 1.5+(r-0.7)/0.15*0.5;return 2+(r-0.85)/0.15;}
+function lenBonus(n){if(n<=3)return 0;if(n===4)return 2;if(n===5)return 5;if(n===6)return 9;if(n===7)return 14;return 14+(n-7)*6;}
+function comboMult(c){if(c>=20)return 2.0;if(c>=10)return 1.5;if(c>=5)return 1.2;return 1.0;}
+function calcScore(e,l,c){return Math.floor((1+lenBonus(l))*ggMult(e)*comboMult(c));}
+function el(id){return document.getElementById(id);}
+function showScreen(id){document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));el(id).classList.add('on');}
+function shakeApp(){el('app').classList.add('shake');setTimeout(()=>el('app').classList.remove('shake'),400);}
+function showStatus(msg,cls){const r=el('status-row');r.textContent=msg;r.className='status-row'+(cls?' '+cls:'');if(r._t)clearTimeout(r._t);if(cls==='err')r._t=setTimeout(()=>{r.textContent='';r.className='status-row';},2000);}
+function showFbPop(text,cls){const f=el('fb-pop');f.textContent=text;f.className='fb-pop '+cls;void f.offsetWidth;f.classList.add('show');clearTimeout(f._t);f._t=setTimeout(()=>{f.className='fb-pop';},950);}
+function showMilestone(text,color){const m=el('milestone');m.textContent=text;m.style.color=color;m.style.textShadow=`0 0 32px ${color}`;m.classList.remove('show');void m.offsetWidth;m.classList.add('show');setTimeout(()=>m.classList.remove('show'),1250);}
+function updateLen(word){const n=word.length,row=el('len-row');row.innerHTML='';for(let i=0;i<8;i++){const d=document.createElement('div');d.className='ld';if(i<n){if(n<=3)d.classList.add('l1');else if(n<=5)d.classList.add('l2');else d.classList.add('l3');}row.appendChild(d);}const b=lenBonus(n);el('len-lbl').textContent=n===0?'':(b>0?`${n}文字  +${b}pt ボーナス`:`${n}文字`);}
+function handleInput(e){getAC();const v=toHira(e.target.value);if(v!==e.target.value)e.target.value=v;updateLen(v.trim());seType();}
+function addChip(word,cls){const c=document.createElement('span');c.className='chip new'+(cls?' '+cls:'');c.textContent=word;el('chips').insertBefore(c,el('chips').firstChild);setTimeout(()=>c.classList.remove('new'),500);const all=el('chips').querySelectorAll('.chip');if(all.length>9)all[all.length-1].remove();}
+function stopTimer(){clearInterval(G.timerInterval);G.timerInterval=null;}
+function startTimer(){stopTimer();G.timerStart=Date.now();G.timerInterval=setInterval(()=>{const e=Date.now()-G.timerStart,pct=Math.max(0,1-e/TURN_MS)*100,rem=Math.max(0,TURN_MS-e)/1000;el('tmr-bar').style.width=pct+'%';el('tmr-bar').style.background=pct<25?'var(--ac2)':pct<45?'var(--ac3)':'var(--ac)';const s=el('tmr-sec');s.textContent=rem.toFixed(1);s.className='tmr-sec'+(pct<25?' d':pct<45?' w':'');const gp=Math.min(100,(e/TURN_MS)*100),gg=ggMult(e);el('gg-bar').style.width=gp+'%';el('gg-bar').style.background=gg>=2?'#ff3c6e':gg>=1.5?'#bf88ff':'#4488ff';el('gg-mult').textContent='×'+gg.toFixed(1);el('gg-mult').style.color=gg>=2?'var(--ac2)':gg>=1.5?'var(--ac4)':'var(--td)';if(pct<25&&e-G.lastDangerTick>450){G.lastDangerTick=e;seTickDanger();}if(e>=TURN_MS){stopTimer();if(G.active)endGame('TIMEOUT');}},TICK_MS);}
+function goCountdown(){getAC();resetG();const fc=START_CHARS[Math.floor(Math.random()*START_CHARS.length)];G.firstChar=fc;el('cd-fc-c').textContent=fc;showScreen('s-cd');let n=3;const tick=()=>{const cdEl=el('cd-n');cdEl.textContent=n;cdEl.classList.remove('pop');void cdEl.offsetWidth;cdEl.classList.add('pop');seCountdown(n);flash('rgba(0,245,200,0.08)',200);if(--n>=1)setTimeout(tick,900);else setTimeout(startGame,900);};setTimeout(tick,150);}
+function startGame(){G.currentChar=G.firstChar;G.active=true;el('g-score').textContent='0';el('g-combo').textContent='0';el('cur-char').textContent=G.currentChar;el('last-word').textContent='最初の単語を入力してください';el('chips').innerHTML='';el('word-inp').value='';el('status-row').textContent='';el('status-row').className='status-row';el('len-row').innerHTML='';el('len-lbl').textContent='';el('gg-bar').style.width='0%';el('gg-mult').textContent='×1.0';showScreen('s-game');setTimeout(()=>{el('word-inp').focus();startTimer();},100);}
+async function submit(){if(!G.active||G.submitting)return;getAC();const inp=el('word-inp');let word=toHira(inp.value.trim());inp.value=word;if(word.length<2){shakeApp();seError();return;}if(!isHira(word)){shakeApp();seError();showStatus('ひらがなで入力してください','err');return;}if(G.currentChar&&word[0]!==G.currentChar){shakeApp();seError();showStatus(`「${G.currentChar}」から始まる言葉を！`,'err');return;}if(G.usedWords.has(word)){shakeApp();seError();showStatus('その言葉はもう使いました','err');return;}const elapsed=Date.now()-G.timerStart;stopTimer();G.submitting=true;inp.disabled=true;showStatus('辞書で確認中…','checking');const ok=await checkDict(word);showStatus('','');inp.disabled=false;if(!G.active){G.submitting=false;return;}if(!ok){shakeApp();seError();flash('rgba(255,60,110,0.18)');showStatus(`「${word}」は辞書にありません`,'err');inp.classList.add('shake');setTimeout(()=>inp.classList.remove('shake'),350);G.timerStart=Date.now()-elapsed;startTimer();G.submitting=false;setTimeout(()=>inp.focus(),100);return;}const lc=lastChar(word);G.usedWords.add(word);G.totalWords++;G.recent=[word,...G.recent].slice(0,8);if(word.length>G.maxLen)G.maxLen=word.length;if(lc==='ん'){addChip(word,'dead');G.active=false;G.submitting=false;seGameOver();shakeApp();flash('rgba(255,60,110,0.3)');setTimeout(()=>endGame('N_ENDING'),350);return;}G.combo++;const pts=calcScore(elapsed,word.length,G.combo);G.score+=pts;if(G.combo>G.maxCombo)G.maxCombo=G.combo;el('g-score').textContent=G.score;const cEl=el('g-combo');cEl.textContent=G.combo;cEl.classList.remove('pop');void cEl.offsetWidth;cEl.classList.add('pop');const gg=ggMult(elapsed),lb=lenBonus(word.length);if(gg>=2.5){showFbPop('GIRIGIRI!!','fb-gg');seGirigiri();burst('girigiri');flash('rgba(191,136,255,0.22)');}else if(lb>=9){showFbPop(`${word.length}文字 +${lb}pt`,'fb-long');seLong(word.length);burst('long');flash('rgba(255,204,0,0.18)');}else if(gg>=1.5){showFbPop('NICE!','fb-nice');seSuccess(Math.min(G.combo,4));burst('success');flash('rgba(0,245,200,0.12)');}else{seSuccess(Math.min(G.combo,3));burst('success');}if(G.combo===5){showMilestone('5 COMBO!  ×1.2','#ffcc00');seMilestone(1);burst('milestone');}else if(G.combo===10){showMilestone('10 COMBO!!  ×1.5','#00f5c8');seMilestone(2);burst('milestone');}else if(G.combo===20){showMilestone('20 COMBO!!!  ×2.0','#ff88ff');seMilestone(3);burst('milestone');}G.currentChar=lc;const ch=el('cur-char');ch.textContent=lc;ch.classList.remove('changed');void ch.offsetWidth;ch.classList.add('changed');el('last-word').innerHTML=`前の言葉: <span>${word}</span>  (+${pts}pt)`;addChip(word,'');inp.value='';updateLen('');G.submitting=false;startTimer();setTimeout(()=>inp.focus(),60);}
+function handleKey(e){if(e.key==='Enter'){e.preventDefault();submit();}}
+const REASONS={TIMEOUT:'時間切れ',N_ENDING:'「ん」で終わった！'};
+function endGame(r){G.active=false;stopTimer();seGameOver();shakeApp();burst('gameover');setTimeout(()=>{el('res-reason').textContent=REASONS[r]??r;el('res-score').textContent=G.score;el('r-combo').textContent=G.maxCombo;el('r-words').textContent=G.totalWords;el('r-maxlen').textContent=G.maxLen;showScreen('s-result');},500);}
+function doShare(){const txt=`無限しりとり🔥\n${G.totalWords}連鎖達成！スコア: ${G.score}\n最大コンボ: ${G.maxCombo} / 最長単語: ${G.maxLen}文字\nお前らこれ超えられる？\n${location.href}\n#無限しりとり`;window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(txt),'_blank','noopener');}
+window.addEventListener('load',()=>{try{if(localStorage.getItem('shiritori_mute')==='1'){MUTED=true;el('mute-btn').textContent='🔇';}}catch(e){}});
+</script>
+</body>
+</html>
