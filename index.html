@@ -107,16 +107,32 @@ body{color:var(--t);font-family:var(--fb);display:flex;align-items:stretch;justi
 .heart.shake{animation:hshake .3s ease-out;}
 @keyframes hshake{0%,100%{transform:scale(1);}30%{transform:scale(1.4);}60%{transform:scale(.82);}80%{transform:scale(1.1);}}
 
-/* ミュートボタン: COMBOの下に自然に収める */
-.mute-btn{
-  margin-top:3px;
-  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);
-  border-radius:8px;padding:2px 7px;
-  font-size:11px;letter-spacing:.3px;color:var(--td);cursor:pointer;
-  font-family:var(--fb);transition:background .15s;line-height:1.6;
-  display:block;text-align:right;
+/* ミュートボタン: 全画面共通・右上固定 */
+.mute-btn-fixed{
+  position:fixed;
+  top:calc(var(--sat) + 10px);
+  right:14px;
+  z-index:1000;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:20px;
+  padding:5px 12px;
+  font-size:13px;
+  color:var(--td);
+  cursor:pointer;
+  font-family:var(--fb);
+  transition:background .15s,transform .1s;
+  line-height:1.5;
+  letter-spacing:.3px;
+  -webkit-backdrop-filter:blur(4px);
+  backdrop-filter:blur(4px);
 }
-.mute-btn:active{background:rgba(255,255,255,.12);}
+.mute-btn-fixed:active{transform:scale(.93);}
+
+/* ゲーム画面ではミュートボタンが少し透明に（邪魔しない） */
+#s-game.on ~ * .mute-btn-fixed,
+body.in-game .mute-btn-fixed{opacity:.5;}
+
 
 /* タイマー */
 .tmr-wrap{width:100%;height:6px;background:var(--sf2);border-radius:3px;overflow:hidden;
@@ -224,6 +240,8 @@ body{color:var(--t);font-family:var(--fb);display:flex;align-items:stretch;justi
 </head>
 <body>
 <canvas class="ptcl" id="ptcl"></canvas>
+<!-- 全画面共通ミュートボタン（fixed） -->
+<button class="mute-btn-fixed" id="mute-btn" onclick="toggleMute()">🔊</button>
 <div id="app">
 
 <!-- TITLE -->
@@ -233,7 +251,7 @@ body{color:var(--t);font-family:var(--fb);display:flex;align-items:stretch;justi
   <div class="scanline"></div>
   <div class="snd-notice">
     <span class="snd-icon">🔊</span>
-    <span class="snd-txt">このゲームは<b>効果音</b>が鳴ります。ゲーム中にミュートできます。</span>
+    <span class="snd-txt">このゲームは<b>効果音</b>が鳴ります。右上でミュートできます。</span>
   </div>
   <div class="rules">
     <p class="r-hd">HOW TO PLAY</p>
@@ -273,7 +291,6 @@ body{color:var(--t);font-family:var(--fb);display:flex;align-items:stretch;justi
       <div class="g-box r">
         <span class="g-lbl">COMBO</span>
         <span class="g-combo" id="g-combo">0</span>
-        <button class="mute-btn" id="mute-btn" onclick="toggleMute()">🔊 MUTE</button>
       </div>
     </div>
 
@@ -349,7 +366,7 @@ function seOver(){[380,300,220,165].forEach((f,i)=>tone(f,'sawtooth',0.32,0.18,i
 function seCD(n){if(n>0)tone(660,'sine',0.16,0.22);else{tone(880,'sine',0.11,0.28);tone(1100,'sine',0.11,0.28,0.09);}}
 function seType(){tone(750,'sine',0.035,0.055);}
 function seNewRecord(){[784,1047,1319,1568].forEach((f,i)=>tone(f,'sine',0.45,0.32,i*0.075));}
-function vib(p){try{if(navigator.vibrate)navigator.vibrate(p);}catch(e){}}
+
 const CV=document.getElementById('ptcl'),CTX=CV.getContext('2d');let particles=[];
 function sp(x,y,colors,n,spd){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=spd*(0.5+Math.random());particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-spd*0.4,r:Math.random()*4+2,c:colors[Math.floor(Math.random()*colors.length)],a:1,g:0.3+Math.random()*0.1});}}
 function ring(x,y,c){for(let i=0;i<20;i++){const a=i/20*Math.PI*2;particles.push({x,y,vx:Math.cos(a)*7,vy:Math.sin(a)*7,r:3,c,a:1,g:0,ring:true});}}
@@ -420,242 +437,6 @@ async function checkDict(w){
   // 両方 null（両API失敗 = ネットワーク障害等）→ 通す（UX優先）
   wC.set(w,true);return true;
 }
-
-/* ===== CONSTANTS ===== */
-const TURN_MS=6000,TICK_MS=55,MAX_LIVES=3;
-const START_CHARS='あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわ'.split('');
-const SMALL={ぁ:'あ',ぃ:'い',ぅ:'う',ぇ:'え',ぉ:'お',っ:'つ',ゃ:'や',ゅ:'ゆ',ょ:'よ',ゎ:'わ'};
-
-let G={};
-function resetG(){G={score:0,combo:0,maxCombo:0,totalWords:0,maxLen:0,
-  currentChar:null,usedWords:new Set(),recent:[],
-  timerStart:0,timerInterval:null,active:false,firstChar:null,
-  lastDangerTick:0,submitting:false,lives:MAX_LIVES};}
-resetG();
-
-function toHira(s){return s.replace(/[\u30A1-\u30F6]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).replace(/\s/g,'');}
-function isHira(s){return /^[\u3041-\u3096ー]+$/.test(s);}
-function lastChar(w){let i=w.length-1;while(i>=0&&w[i]==='ー')i--;if(i<0)return w[w.length-1];return SMALL[w[i]]??w[i];}
-function ggMult(e){const r=Math.min(1,e/TURN_MS);if(r<0.5)return 1.0;if(r<0.7)return 1+(r-0.5)/0.2*0.5;if(r<0.85)return 1.5+(r-0.7)/0.15*0.5;return 2+(r-0.85)/0.15;}
-function lenBonus(n){if(n<=3)return 0;if(n===4)return 2;if(n===5)return 5;if(n===6)return 9;if(n===7)return 14;return 14+(n-7)*6;}
-function comboMult(c){if(c>=20)return 2.0;if(c>=10)return 1.5;if(c>=5)return 1.2;return 1.0;}
-function calcScore(e,l,c){return Math.floor((1+lenBonus(l))*ggMult(e)*comboMult(c));}
-
-/* ===== BEST SCORE ===== */
-function getBest(){try{return parseInt(localStorage.getItem('sb')||'0');}catch{return 0;}}
-function saveBest(s){try{localStorage.setItem('sb',String(s));}catch{}}
-function updateTitleBest(){const b=getBest();if(b>0){el('title-best').style.display='block';el('title-best-val').textContent=b;}}
-
-/* ===== UI ===== */
-function el(id){return document.getElementById(id);}
-function showScreen(id){document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));el(id).classList.add('on');}
-function shakeApp(){el('app').classList.add('shake');setTimeout(()=>el('app').classList.remove('shake'),400);}
-function showStatus(msg,cls){const r=el('status-row');r.textContent=msg;r.className='status-row'+(cls?' '+cls:'');if(r._t)clearTimeout(r._t);if(cls==='err')r._t=setTimeout(()=>{r.textContent='';r.className='status-row';},2200);}
-function showFbPop(text,cls){const f=el('fb-pop');f.textContent=text;f.className='fb-pop '+cls;void f.offsetWidth;f.classList.add('show');clearTimeout(f._t);f._t=setTimeout(()=>{f.className='fb-pop';},950);}
-function showMilestone(text,color){const m=el('milestone');m.textContent=text;m.style.color=color;m.style.textShadow=`0 0 32px ${color}`;m.classList.remove('show');void m.offsetWidth;m.classList.add('show');setTimeout(()=>m.classList.remove('show'),1300);}
-function updateLen(word){const n=word.length,row=el('len-row');row.innerHTML='';for(let i=0;i<8;i++){const d=document.createElement('div');d.className='ld';if(i<n){if(n<=3)d.classList.add('l1');else if(n<=5)d.classList.add('l2');else d.classList.add('l3');}row.appendChild(d);}const b=lenBonus(n);el('len-lbl').textContent=n===0?'':(b>0?`${n}文字  +${b}pt ボーナス`:`${n}文字`);}
-function handleInput(e){getAC();const v=toHira(e.target.value);if(v!==e.target.value)e.target.value=v;updateLen(v.trim());seType();}
-function addChip(word,cls){const c=document.createElement('span');c.className='chip new'+(cls?' '+cls:'');c.textContent=word;el('chips').insertBefore(c,el('chips').firstChild);setTimeout(()=>c.classList.remove('new'),500);const all=el('chips').querySelectorAll('.chip');if(all.length>9)all[all.length-1].remove();}
-
-/* ===== LIVES UI ===== */
-function renderLives(){
-  for(let i=0;i<MAX_LIVES;i++){
-    const h=el('h'+i);
-    h.className='heart'+(i>=G.lives?' lost':'');
-  }
-}
-function loseLife(){
-  G.lives--;
-  const h=el('h'+G.lives);
-  h.classList.add('shake');
-  setTimeout(()=>h.classList.remove('shake'),350);
-  renderLives();
-  seLifeLost();
-  flash('rgba(255,60,110,0.28)');
-  if(G.lives<=0){
-    setTimeout(()=>endGame('MISS3'),300);
-    return true;
-  }
-  return false;
-}
-
-/* ===== TIMER ===== */
-function stopTimer(){clearInterval(G.timerInterval);G.timerInterval=null;}
-function startTimer(){
-  stopTimer();G.timerStart=Date.now();
-  G.timerInterval=setInterval(()=>{
-    const e=Date.now()-G.timerStart,pct=Math.max(0,1-e/TURN_MS)*100,rem=Math.max(0,TURN_MS-e)/1000;
-    el('tmr-bar').style.width=pct+'%';
-    el('tmr-bar').style.background=pct<25?'var(--ac2)':pct<45?'var(--ac3)':'var(--ac)';
-    const s=el('tmr-sec');s.textContent=rem.toFixed(1);s.className='tmr-sec'+(pct<25?' d':pct<45?' w':'');
-    const gg=ggMult(e);
-    const ratio=e/TURN_MS;
-
-    // タイマーバー＋秒数: 残り1秒(ratio>0.833)からうっすら消える
-    const tmrOpacity=ratio<0.833?1:Math.max(0,1-(ratio-0.833)/0.167);
-    el('tmr-wrap').style.opacity=tmrOpacity.toFixed(3);
-    s.style.opacity=tmrOpacity.toFixed(3);
-
-    // GIRIGIRI倍率表示: 0〜50%は非表示、50〜70%でフェードイン、70〜83%最大、83%〜でフェードアウト
-    let ggOp;
-    if(ratio<0.50) ggOp=0;
-    else if(ratio<0.70) ggOp=(ratio-0.50)/0.20;
-    else if(ratio<0.833) ggOp=1;
-    else ggOp=Math.max(0,1-(ratio-0.833)/0.167);
-    el('gg-row').style.opacity=ggOp.toFixed(3);
-    el('gg-mult').textContent='×'+gg.toFixed(1);
-    el('gg-mult').style.color=gg>=2?'var(--ac2)':gg>=1.5?'var(--ac4)':'var(--td)';
-
-    if(pct<25&&e-G.lastDangerTick>450){G.lastDangerTick=e;seTick();}
-    if(e>=TURN_MS){stopTimer();if(G.active)endGame('TIMEOUT');}
-  },TICK_MS);
-}
-
-/* ===== COUNTDOWN ===== */
-function goCountdown(){
-  getAC();resetG();
-  const fc=START_CHARS[Math.floor(Math.random()*START_CHARS.length)];
-  G.firstChar=fc;el('cd-fc-c').textContent=fc;showScreen('s-cd');
-  let n=3;
-  const tick=()=>{const cdEl=el('cd-n');cdEl.textContent=n;cdEl.classList.remove('pop');void cdEl.offsetWidth;cdEl.classList.add('pop');seCD(n);flash('rgba(0,245,200,0.08)',200);if(--n>=1)setTimeout(tick,900);else setTimeout(startGame,900);};
-  setTimeout(tick,150);
-}
-
-/* ===== START GAME ===== */
-function startGame(){
-  G.currentChar=G.firstChar;G.active=true;
-  el('g-score').textContent='0';el('g-combo').textContent='0';
-  el('cur-char').textContent=G.currentChar;
-  el('last-word').textContent='最初の単語を入力してください';
-  el('chips').innerHTML='';el('word-inp').value='';
-  el('status-row').textContent='';el('status-row').className='status-row';
-  el('len-row').innerHTML='';el('len-lbl').textContent='';
-  el('gg-mult').textContent='×1.0';el('gg-row').style.opacity='0';
-  el('tmr-wrap').style.opacity='1';el('tmr-sec').style.opacity='1';
-  renderLives();
-  showScreen('s-game');
-  setTimeout(()=>{el('word-inp').focus();startTimer();},100);
-}
-
-/* ===== SUBMIT ===== */
-async function submit(){
-  if(!G.active||G.submitting)return;
-  getAC();
-  const inp=el('word-inp');
-  let word=toHira(inp.value.trim());inp.value=word;
-  if(word.length<2){shakeApp();seErr();return;}
-  if(!isHira(word)){shakeApp();seErr();showStatus('ひらがなで入力してください','err');return;}
-  if(G.currentChar&&word[0]!==G.currentChar){
-    shakeApp();seErr();
-    showStatus(`「${G.currentChar}」から始まる言葉を！`,'err');
-    if(loseLife())return;
-    inp.value='';return;
-  }
-  if(G.usedWords.has(word)){
-    shakeApp();seErr();showStatus('その言葉はもう使いました','err');
-    if(loseLife())return;
-    inp.value='';return;
-  }
-
-  // 辞書チェック中はタイマー一時停止
-  const elapsed=Date.now()-G.timerStart;
-  stopTimer();G.submitting=true;inp.disabled=true;
-  showStatus('辞書で確認中…','checking');
-  const ok=await checkDict(word);
-  showStatus('','');inp.disabled=false;
-  if(!G.active){G.submitting=false;return;}
-
-  if(!ok){
-    shakeApp();seErr();flash('rgba(255,60,110,0.2)');
-    showStatus(`「${word}」は辞書にありません`,'err');
-    inp.classList.add('shake');setTimeout(()=>inp.classList.remove('shake'),350);
-    // 時間は引き継いで再開
-    G.timerStart=Date.now()-elapsed;
-    G.submitting=false;
-    const dead=loseLife();
-    if(dead)return;
-    startTimer();inp.value='';setTimeout(()=>inp.focus(),100);
-    return;
-  }
-
-  // Valid!
-  const lc=lastChar(word);
-  G.usedWords.add(word);G.totalWords++;
-  G.recent=[word,...G.recent].slice(0,8);
-  if(word.length>G.maxLen)G.maxLen=word.length;
-
-  if(lc==='ん'){
-    addChip(word,'dead');G.active=false;G.submitting=false;
-    seOver();shakeApp();flash('rgba(255,60,110,0.3)');
-    setTimeout(()=>endGame('N_ENDING'),350);return;
-  }
-
-  G.combo++;const pts=calcScore(elapsed,word.length,G.combo);
-  G.score+=pts;if(G.combo>G.maxCombo)G.maxCombo=G.combo;
-  el('g-score').textContent=G.score;
-  const cEl=el('g-combo');cEl.textContent=G.combo;cEl.classList.remove('pop');void cEl.offsetWidth;cEl.classList.add('pop');
-
-  const gg=ggMult(elapsed),lb=lenBonus(word.length);
-  if(gg>=2.5){showFbPop('GIRIGIRI!!','fb-gg');seGG();burst('gg');flash('rgba(191,136,255,0.22)');}
-  else if(lb>=9){showFbPop(`${word.length}文字 +${lb}pt`,'fb-long');seLong(word.length);burst('long');flash('rgba(255,204,0,0.18)');}
-  else if(gg>=1.5){showFbPop('NICE!','fb-nice');seOk(Math.min(G.combo,4));burst('ok');flash('rgba(0,245,200,0.12)');}
-  else{seOk(Math.min(G.combo,3));burst('ok');}
-
-  if(G.combo===5){showMilestone('5 COMBO!\n×1.2','#ffcc00');seMs(1);burst('ms');}
-  else if(G.combo===10){showMilestone('10 COMBO!!\n×1.5','#00f5c8');seMs(2);burst('ms');}
-  else if(G.combo===20){showMilestone('20 COMBO!!!\n×2.0','#ff88ff');seMs(3);burst('ms');}
-
-  G.currentChar=lc;
-  const ch=el('cur-char');ch.textContent=lc;ch.classList.remove('changed');void ch.offsetWidth;ch.classList.add('changed');
-  el('last-word').innerHTML=`前の言葉: <span>${word}</span>  (+${pts}pt)`;
-  addChip(word,'');inp.value='';updateLen('');
-  G.submitting=false;startTimer();setTimeout(()=>inp.focus(),60);
-}
-function handleKey(e){if(e.key==='Enter'){e.preventDefault();submit();}}
-
-/* ===== END GAME ===== */
-const REASONS={TIMEOUT:'時間切れ',N_ENDING:'「ん」で終わった！',MISS3:'ミス3回でゲームオーバー'};
-function endGame(r){
-  G.active=false;stopTimer();seOver();shakeApp();burst('over');
-  const prev=getBest(),isNew=G.score>prev&&G.score>0;
-  if(isNew)saveBest(G.score);
-  setTimeout(()=>{
-    el('res-reason').textContent=REASONS[r]??r;
-    el('res-score').textContent=G.score;
-    el('r-combo').textContent=G.maxCombo;
-    el('r-words').textContent=G.totalWords;
-    el('r-maxlen').textContent=G.maxLen;
-    const nrw=el('new-record-wrap');
-    if(isNew){
-      nrw.innerHTML='<div class="new-record-banner">🏆 NEW RECORD!</div>';
-      setTimeout(()=>{seNewRecord();burst('nr');flash('rgba(255,204,0,0.3)');},200);
-    }else{
-      nrw.innerHTML='';
-    }
-    const bestEl=el('res-best');
-    bestEl.innerHTML=isNew?`<span>🎉 自己ベスト更新！</span>`:`ベスト: <span>${getBest()}</span>`;
-    showScreen('s-result');
-    updateTitleBest();
-  },500);
-}
-
-/* ===== SHARE ===== */
-function doShare(){
-  const best=getBest();
-  const txt=`無限しりとり🔥\n${G.totalWords}連鎖！スコア: ${G.score}${G.score>=best&&G.score>0?' 🏆自己ベスト！':''}\n最大コンボ: ${G.maxCombo} / 最長: ${G.maxLen}文字\nお前らこれ超えられる？\n${location.href}\n#無限しりとり`;
-  window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(txt),'_blank','noopener');
-}
-
-/* ===== INIT ===== */
-window.addEventListener('load',()=>{
-  try{if(localStorage.getItem('sm')==='1'){MUTED=true;el('mute-btn').textContent='🔇';}}catch(e){}
-  updateTitleBest();
-  // Service Worker登録（PWA）
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-  }
-});
-
 </script>
 <script>
 const TURN_MS=6000,TICK_MS=50,MAX_LIVES=3;
@@ -683,7 +464,7 @@ function showMilestone(text,color){const m=el('milestone');m.textContent=text;m.
 function addChip(word,cls){const c=document.createElement('span');c.className='chip new'+(cls?' '+cls:'');c.textContent=word;el('chips').insertBefore(c,el('chips').firstChild);setTimeout(()=>c.classList.remove('new'),500);const all=el('chips').querySelectorAll('.chip');if(all.length>10)all[all.length-1].remove();}
 function handleInput(e){getAC();const v=toHira(e.target.value);if(v!==e.target.value)e.target.value=v;seType();}
 function renderLives(){for(let i=0;i<MAX_LIVES;i++)el('h'+i).className='heart'+(i>=G.lives?' lost':'');}
-function loseLife(){G.lives--;const h=el('h'+G.lives);h.classList.add('shake');setTimeout(()=>h.classList.remove('shake'),350);renderLives();seLifeLost();vib([30,20,30]);flash('rgba(255,60,110,0.28)');if(G.lives<=0){setTimeout(()=>endGame('MISS3'),300);return true;}return false;}
+function loseLife(){G.lives--;const h=el('h'+G.lives);h.classList.add('shake');setTimeout(()=>h.classList.remove('shake'),350);renderLives();seLifeLost();flash('rgba(255,60,110,0.28)');if(G.lives<=0){setTimeout(()=>endGame('MISS3'),300);return true;}return false;}
 function stopTimer(){clearInterval(G.timerInterval);G.timerInterval=null;}
 function startTimer(){
   stopTimer();G.timerStart=Date.now();
@@ -702,42 +483,82 @@ function startTimer(){
     if(e>=TURN_MS){stopTimer();if(G.active)endGame('TIMEOUT');}
   },TICK_MS);
 }
-function goCountdown(){getAC();resetG();const fc=START_CHARS[Math.floor(Math.random()*START_CHARS.length)];G.firstChar=fc;el('cd-fc-c').textContent=fc;showScreen('s-cd');let n=3;const tick=()=>{const cdEl=el('cd-n');cdEl.textContent=n;cdEl.classList.remove('pop');void cdEl.offsetWidth;cdEl.classList.add('pop');seCD(n);flash('rgba(0,245,200,0.08)',200);vib(n>0?[10]:[20,10,20]);if(--n>=1)setTimeout(tick,900);else setTimeout(startGame,900);};setTimeout(tick,150);}
-function startGame(){G.currentChar=G.firstChar;G.active=true;el('g-score').textContent='0';el('g-combo').textContent='0';el('cur-char').textContent=G.currentChar;el('last-word').textContent='最初の単語を入力してください';el('chips').innerHTML='';const inp=el('word-inp');inp.value='';inp.disabled=false;el('status-row').textContent='';el('status-row').className='status-row';el('gg-val').style.opacity='0';el('tmr-wrap').style.opacity='1';el('tmr-sec').style.opacity='1';renderLives();showScreen('s-game');setTimeout(()=>{inp.focus();startTimer();},80);}
+function goCountdown(){
+  getAC();resetG();
+  const fc=START_CHARS[Math.floor(Math.random()*START_CHARS.length)];
+  G.firstChar=fc;el('cd-fc-c').textContent=fc;showScreen('s-cd');
+  let n=3;
+  const tick=()=>{
+    const cdEl=el('cd-n');cdEl.textContent=n;
+    cdEl.classList.remove('pop');void cdEl.offsetWidth;cdEl.classList.add('pop');
+    seCD(n);flash('rgba(0,245,200,0.08)',200);
+    if(--n>=1)setTimeout(tick,900);else setTimeout(startGame,900);
+  };
+  setTimeout(tick,150);
+}
+function startGame(){
+  G.currentChar=G.firstChar;G.active=true;
+  el('g-score').textContent='0';el('g-combo').textContent='0';
+  el('cur-char').textContent=G.currentChar;
+  el('last-word').textContent='最初の単語を入力してください';
+  el('chips').innerHTML='';
+  const inp=el('word-inp');inp.value='';inp.disabled=false;
+  el('status-row').textContent='';el('status-row').className='status-row';
+  el('gg-val').style.opacity='0';
+  el('tmr-wrap').style.opacity='1';el('tmr-sec').style.opacity='1';
+  renderLives();
+  showScreen('s-game');
+  setTimeout(()=>{inp.focus();startTimer();},80);
+}
 async function submit(){
   if(!G.active||G.submitting)return;getAC();
   const inp=el('word-inp');let word=toHira(inp.value.trim());inp.value=word;
-  if(word.length<2){shakeApp();seErr();vib([40,10,40]);return;}
-  if(!isHira(word)){shakeApp();seErr();vib([40,10,40]);showStatus('ひらがなで入力してください','err');return;}
-  if(G.currentChar&&word[0]!==G.currentChar){shakeApp();seErr();vib([40,10,40]);showStatus(`「${G.currentChar}」から始まる言葉を！`,'err');if(loseLife())return;inp.value='';setTimeout(()=>inp.focus(),60);return;}
-  if(G.usedWords.has(word)){shakeApp();seErr();vib([40,10,40]);showStatus('その言葉はもう使いました','err');if(loseLife())return;inp.value='';setTimeout(()=>inp.focus(),60);return;}
+  if(word.length<2){shakeApp();seErr();return;}
+  if(!isHira(word)){shakeApp();seErr();showStatus('ひらがなで入力してください','err');return;}
+  if(G.currentChar&&word[0]!==G.currentChar){shakeApp();seErr();showStatus(`「${G.currentChar}」から始まる言葉を！`,'err');if(loseLife())return;inp.value='';setTimeout(()=>inp.focus(),60);return;}
+  if(G.usedWords.has(word)){shakeApp();seErr();showStatus('その言葉はもう使いました','err');if(loseLife())return;inp.value='';setTimeout(()=>inp.focus(),60);return;}
   const elapsed=Date.now()-G.timerStart;stopTimer();G.submitting=true;inp.disabled=true;
   showStatus('辞書で確認中…','checking');
   const ok=await checkDict(word);
   showStatus('','');inp.disabled=false;
   if(!G.active){G.submitting=false;return;}
-  if(!ok){shakeApp();seErr();vib([40,10,40]);flash('rgba(255,60,110,0.2)');showStatus(`「${word}」は辞書にありません`,'err');inp.classList.add('shake');setTimeout(()=>inp.classList.remove('shake'),350);G.timerStart=Date.now()-elapsed;G.submitting=false;if(loseLife())return;startTimer();inp.value='';setTimeout(()=>inp.focus(),80);return;}
+  if(!ok){shakeApp();seErr();flash('rgba(255,60,110,0.2)');showStatus(`「${word}」は辞書にありません`,'err');inp.classList.add('shake');setTimeout(()=>inp.classList.remove('shake'),350);G.timerStart=Date.now()-elapsed;G.submitting=false;if(loseLife())return;startTimer();inp.value='';setTimeout(()=>inp.focus(),80);return;}
   const lc=lastChar(word);G.usedWords.add(word);G.totalWords++;G.recent=[word,...G.recent].slice(0,8);if(word.length>G.maxLen)G.maxLen=word.length;
-  if(lc==='ん'){addChip(word,'dead');G.active=false;G.submitting=false;seOver();shakeApp();vib([80,20,80,20,120]);flash('rgba(255,60,110,0.3)');setTimeout(()=>endGame('N_ENDING'),350);return;}
+  if(lc==='ん'){addChip(word,'dead');G.active=false;G.submitting=false;seOver();shakeApp();flash('rgba(255,60,110,0.3)');setTimeout(()=>endGame('N_ENDING'),350);return;}
   G.combo++;const pts=calcScore(elapsed,word.length,G.combo);G.score+=pts;if(G.combo>G.maxCombo)G.maxCombo=G.combo;
   el('g-score').textContent=G.score;const cEl=el('g-combo');cEl.textContent=G.combo;cEl.classList.remove('pop');void cEl.offsetWidth;cEl.classList.add('pop');
   const gg=ggMult(elapsed),lb=lenBonus(word.length);
-  if(gg>=2.5){showFbPop('GIRIGIRI!!','fb-gg');seGG();burst('gg');flash('rgba(191,136,255,0.22)');vib([10,5,10,5,30]);}
-  else if(lb>=9){showFbPop(`${word.length}文字 +${lb}pt`,'fb-long');seLong(word.length);burst('long');flash('rgba(255,204,0,0.18)');vib([20]);}
-  else if(gg>=1.5){showFbPop('NICE!','fb-nice');seOk(Math.min(G.combo,4));burst('ok');flash('rgba(0,245,200,0.12)');vib([10]);}
-  else{seOk(Math.min(G.combo,3));burst('ok');vib([8]);}
-  if(G.combo===5){showMilestone('5 COMBO!  ×1.2','#ffcc00');seMs(1);burst('ms');vib([15,10,15,10,40]);}
-  else if(G.combo===10){showMilestone('10 COMBO!!  ×1.5','#00f5c8');seMs(2);burst('ms');vib([20,10,20,10,60]);}
-  else if(G.combo===20){showMilestone('20 COMBO!!!  ×2.0','#ff88ff');seMs(3);burst('ms');vib([30,10,30,10,80]);}
+  if(gg>=2.5){showFbPop('GIRIGIRI!!','fb-gg');seGG();burst('gg');flash('rgba(191,136,255,0.22)');}
+  else if(lb>=9){showFbPop(`${word.length}文字 +${lb}pt`,'fb-long');seLong(word.length);burst('long');flash('rgba(255,204,0,0.18)');}
+  else if(gg>=1.5){showFbPop('NICE!','fb-nice');seOk(Math.min(G.combo,4));burst('ok');flash('rgba(0,245,200,0.12)');}
+  else{seOk(Math.min(G.combo,3));burst('ok');}
+  if(G.combo===5){showMilestone('5 COMBO!  ×1.2','#ffcc00');seMs(1);burst('ms');}
+  else if(G.combo===10){showMilestone('10 COMBO!!  ×1.5','#00f5c8');seMs(2);burst('ms');}
+  else if(G.combo===20){showMilestone('20 COMBO!!!  ×2.0','#ff88ff');seMs(3);burst('ms');}
   G.currentChar=lc;const ch=el('cur-char');ch.textContent=lc;ch.classList.remove('changed');void ch.offsetWidth;ch.classList.add('changed');
   el('last-word').innerHTML=`前の言葉: <b>${word}</b> <span style="font-size:10px;color:var(--ac3);">+${pts}pt</span>`;
   addChip(word,'');inp.value='';G.submitting=false;startTimer();inp.focus();
 }
 function handleKey(e){if(e.key==='Enter'){e.preventDefault();submit();}}
 const REASONS={TIMEOUT:'時間切れ',N_ENDING:'「ん」で終わった！',MISS3:'ミス3回でゲームオーバー'};
-function endGame(r){G.active=false;stopTimer();seOver();shakeApp();burst('over');vib([100,30,100]);const prev=getBest(),isNew=G.score>prev&&G.score>0;if(isNew)saveBest(G.score);setTimeout(()=>{el('res-reason').textContent=REASONS[r]??r;el('res-score').textContent=G.score;el('r-combo').textContent=G.maxCombo;el('r-words').textContent=G.totalWords;el('r-maxlen').textContent=G.maxLen;const nrw=el('new-record-wrap');if(isNew){nrw.innerHTML='<div class="new-record-banner">🏆 NEW RECORD!</div>';setTimeout(()=>{seNewRecord();burst('nr');flash('rgba(255,204,0,0.3)');vib([50,20,50,20,100]);},200);}else{nrw.innerHTML='';}el('res-best').innerHTML=isNew?'<b>🎉 自己ベスト更新！</b>':`ベスト: <b>${getBest()}</b>`;showScreen('s-result');updateTitleBest();},500);}
+function endGame(r){
+  G.active=false;stopTimer();seOver();shakeApp();burst('over');
+  const prev=getBest(),isNew=G.score>prev&&G.score>0;if(isNew)saveBest(G.score);
+  setTimeout(()=>{
+    el('res-reason').textContent=REASONS[r]??r;el('res-score').textContent=G.score;
+    el('r-combo').textContent=G.maxCombo;el('r-words').textContent=G.totalWords;el('r-maxlen').textContent=G.maxLen;
+    const nrw=el('new-record-wrap');
+    if(isNew){nrw.innerHTML='<div class="new-record-banner">🏆 NEW RECORD!</div>';setTimeout(()=>{seNewRecord();burst('nr');flash('rgba(255,204,0,0.3)');},200);}
+    else{nrw.innerHTML='';}
+    el('res-best').innerHTML=isNew?'<b>🎉 自己ベスト更新！</b>':`ベスト: <b>${getBest()}</b>`;
+    showScreen('s-result');updateTitleBest();
+  },500);
+}
 function doShare(){const best=getBest();const txt=`無限しりとり🔥\n${G.totalWords}連鎖！スコア: ${G.score}${G.score>=best&&G.score>0?' 🏆自己ベスト！':''}\n最大コンボ: ${G.maxCombo} / 最長: ${G.maxLen}文字\nお前らこれ超えられる？\n${location.href}\n#無限しりとり`;window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(txt),'_blank','noopener');}
-window.addEventListener('load',()=>{try{if(localStorage.getItem('sm')==='1'){MUTED=true;el('mute-btn').textContent='🔇 ON';}}catch(e){}updateTitleBest();});
+window.addEventListener('load',()=>{
+  try{if(localStorage.getItem('sm')==='1'){MUTED=true;el('mute-btn').textContent='🔇';}}catch(e){}
+  updateTitleBest();
+});
 </script>
 </body>
 </html>
