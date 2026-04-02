@@ -249,22 +249,6 @@ body{color:var(--t);font-family:var(--fb);display:flex;align-items:stretch;justi
 </style>
 </head>
 <body>
-    <div class="mini-score-area">
-      <div class="mini-score" id="mini-score">0</div>
-      <div style="font-size:9px;color:var(--td);letter-spacing:1px;">SCORE</div>
-    </div>
-    <div class="mini-score-area">
-      <div class="mini-combo" id="mini-combo">0</div>
-      <div style="font-size:9px;color:var(--td);letter-spacing:1px;">COMBO</div>
-    </div>
-    <div class="mini-right">
-      <div class="mini-hearts" id="mini-hearts">❤️❤️❤️</div>
-      <div class="mini-timer-bar">
-        <div class="mini-timer-fill" id="mini-timer-fill" style="width:100%;background:var(--ac);"></div>
-      </div>
-    </div>
-  </div>
-</div>
 <canvas class="ptcl" id="ptcl"></canvas>
 <!-- 全画面共通ミュートボタン（fixed） -->
 <button class="mute-btn-fixed" id="mute-btn" onclick="toggleMute()">🔊</button>
@@ -480,6 +464,7 @@ async function checkDict(w){
   if(DICT.has(w))return true;
   // ② 外部辞書（words.txt が読み込まれていれば）
   if(EXT_DICT&&EXT_DICT.has(w))return true;
+  // ③ キャッシュ確認（APIの結果を再利用）
   if(wC.has(w))return wC.get(w);
 
   // ② Wiktionary と Wikipedia を並列リクエスト
