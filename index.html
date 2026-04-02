@@ -128,9 +128,43 @@ body{color:var(--t);font-family:var(--fb);display:flex;align-items:stretch;justi
 .cur-char{font-family:var(--fg);font-size:90px;color:var(--ac);text-shadow:0 0 60px rgba(0,245,200,.6);line-height:1;}
 .cur-char.changed{animation:chpop .2s ease-out;}
 @keyframes chpop{0%{transform:scale(.45);opacity:.2;}55%{transform:scale(1.2);}100%{transform:scale(1);opacity:1;}}
+
 /* 下部 */
 .last-word{font-size:13px;color:var(--td);text-align:center;min-height:18px;margin-bottom:3px;width:100%;}
 .last-word b{color:var(--t);font-weight:400;}
+
+/* ===== サブHUD（入力欄直上・スマホ専用常時表示） ===== */
+.sub-hud{
+  display:none; /* PC非表示 */
+  width:100%;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:11px;
+  padding:7px 12px 7px 14px;
+  margin-bottom:6px;
+}
+.sub-hud-row{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.sub-char-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+.sub-char{font-family:var(--fg);font-size:28px;color:var(--ac);text-shadow:0 0 14px rgba(0,245,200,.55);line-height:1;}
+.sub-lbl{font-size:8px;letter-spacing:1.5px;color:var(--td);text-transform:uppercase;margin-top:1px;}
+.sub-nums{display:flex;gap:12px;align-items:center;}
+.sub-num{display:flex;flex-direction:column;align-items:center;}
+.sub-val-s{font-family:var(--fg);font-size:19px;color:var(--ac3);line-height:1;}
+.sub-val-c{font-family:var(--fg);font-size:19px;color:var(--ac2);line-height:1;}
+.sub-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;}
+.sub-hearts{display:flex;gap:2px;font-size:13px;line-height:1;}
+.sub-tmr{width:54px;height:4px;background:var(--sf2);border-radius:2px;overflow:hidden;}
+.sub-tmr-bar{height:100%;border-radius:2px;transition:width .07s linear,background .2s;}
+
+/* スマホ（≤599px）のみサブHUD表示 */
+@media(max-width:599px){.sub-hud{display:block;}}
+/* PC（≥600px）でサイズ拡大 */
+@media(min-width:600px){
+  .cur-char{font-size:clamp(90px,12vw,130px);}
+  .g-score,.g-combo{font-size:clamp(30px,4vw,38px);}
+  .game-top{height:380px;}
+}
+
 .status-row{font-size:13px;text-align:center;min-height:18px;margin-bottom:3px;width:100%;}
 .status-row.checking{color:var(--ac3);animation:blink .5s ease-in-out infinite;}
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
@@ -163,11 +197,6 @@ body{color:var(--t);font-family:var(--fb);display:flex;align-items:stretch;justi
 .chip.new{border-color:var(--ac);color:var(--ac);animation:chipin .22s ease-out;}
 @keyframes chipin{from{transform:scale(0);opacity:0;}to{transform:scale(1);opacity:1;}}
 .chip.dead{border-color:var(--ac2);color:var(--ac2);}
-@media(min-width:600px){
-  .cur-char{font-size:clamp(90px,12vw,130px);}
-  .g-score,.g-combo{font-size:clamp(30px,4vw,38px);}
-  .game-top{height:380px;}
-}
 
 /* パーティクル・マイルストーン */
 .ptcl{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50;}
@@ -217,52 +246,9 @@ body{color:var(--t);font-family:var(--fb);display:flex;align-items:stretch;justi
   transition:transform .1s;display:flex;align-items:center;justify-content:center;gap:8px;}
 .btn-share:active{transform:scale(.96);}
 
-/* ===== スマホ用ミニHUD =====
-   キーボード表示時、画面上部に固定で最重要情報を1行表示
-   game-topが隠れても常に見える
-*/
-.mini-hud{
-  display:none; /* デフォルト非表示。JSで制御 */
-  position:fixed;
-  top:calc(var(--sat) + 0px);
-  left:0;right:0;
-  z-index:500;
-  background:rgba(7,7,15,0.95);
-  border-bottom:1px solid rgba(0,245,200,0.15);
-  padding:6px 16px 7px;
-  -webkit-backdrop-filter:blur(8px);
-  backdrop-filter:blur(8px);
-}
-.mini-hud-inner{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  max-width:430px;
-  margin:0 auto;
-}
-.mini-char{
-  font-family:var(--fg);
-  font-size:28px;
-  color:var(--ac);
-  text-shadow:0 0 20px rgba(0,245,200,.7);
-  line-height:1;
-}
-.mini-score-area{
-  display:flex;flex-direction:column;align-items:center;gap:1px;
-}
-.mini-score{font-family:var(--fg);font-size:18px;color:var(--ac3);line-height:1;}
-.mini-combo{font-family:var(--fg);font-size:14px;color:var(--ac2);line-height:1;}
-.mini-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
-.mini-hearts{display:flex;gap:4px;font-size:13px;}
-.mini-timer-bar{width:60px;height:4px;background:var(--sf2);border-radius:2px;overflow:hidden;}
-.mini-timer-fill{height:100%;border-radius:2px;transition:width .07s linear,background .2s;}
 </style>
 </head>
 <body>
-<!-- スマホ用ミニHUD（キーボード表示時に上部固定） -->
-<div class="mini-hud" id="mini-hud">
-  <div class="mini-hud-inner">
-    <div class="mini-char" id="mini-char">ー</div>
     <div class="mini-score-area">
       <div class="mini-score" id="mini-score">0</div>
       <div style="font-size:9px;color:var(--td);letter-spacing:1px;">SCORE</div>
@@ -349,6 +335,31 @@ body{color:var(--t);font-family:var(--fb);display:flex;align-items:stretch;justi
   </div>
 
   <div class="game-bottom">
+    <!-- サブHUD：スマホ専用、入力欄直上に常時表示 -->
+    <div class="sub-hud" id="sub-hud">
+      <div class="sub-hud-row">
+        <div class="sub-char-wrap">
+          <div class="sub-char" id="sub-char">ー</div>
+          <div class="sub-lbl">NEXT</div>
+        </div>
+        <div class="sub-nums">
+          <div class="sub-num">
+            <div class="sub-val-s" id="sub-score">0</div>
+            <div class="sub-lbl">SCORE</div>
+          </div>
+          <div class="sub-num">
+            <div class="sub-val-c" id="sub-combo">0</div>
+            <div class="sub-lbl">COMBO</div>
+          </div>
+        </div>
+        <div class="sub-right">
+          <div class="sub-hearts" id="sub-hearts">❤️❤️❤️</div>
+          <div class="sub-tmr">
+            <div class="sub-tmr-bar" id="sub-tmr-bar" style="width:100%;background:var(--ac);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     <p class="last-word" id="last-word">最初の単語を入力してください</p>
     <div class="status-row" id="status-row"></div>
     <div class="inp-outer">
@@ -518,8 +529,18 @@ function showFbPop(text,cls){const f=el('fb-pop');f.textContent=text;f.className
 function showMilestone(text,color){const m=el('milestone');m.textContent=text;m.style.color=color;m.style.textShadow=`0 0 32px ${color}`;m.classList.remove('show');void m.offsetWidth;m.classList.add('show');setTimeout(()=>m.classList.remove('show'),1250);}
 function addChip(word,cls){const c=document.createElement('span');c.className='chip new'+(cls?' '+cls:'');c.textContent=word;el('chips').insertBefore(c,el('chips').firstChild);setTimeout(()=>c.classList.remove('new'),500);const all=el('chips').querySelectorAll('.chip');if(all.length>10)all[all.length-1].remove();}
 function handleInput(e){getAC();const v=toHira(e.target.value);if(v!==e.target.value)e.target.value=v;seType();}
+
+/* ===== サブHUD更新 ===== */
+function updateSubHud(){
+  const sh=el('sub-hud');if(!sh)return;
+  el('sub-score').textContent=G.score;
+  el('sub-combo').textContent=G.combo;
+  el('sub-char').textContent=G.currentChar||'ー';
+  let h='';for(let i=0;i<MAX_LIVES;i++)h+=i<G.lives?'❤️':'🖤';
+  el('sub-hearts').textContent=h;
+}
 function renderLives(){for(let i=0;i<MAX_LIVES;i++)el('h'+i).className='heart'+(i>=G.lives?' lost':'');}
-function loseLife(){G.lives--;const h=el('h'+G.lives);h.classList.add('shake');setTimeout(()=>h.classList.remove('shake'),350);renderLives();seLifeLost();flash('rgba(255,60,110,0.28)');if(G.lives<=0){setTimeout(()=>endGame('MISS3'),300);return true;}return false;}
+function loseLife(){G.lives--;const h=el('h'+G.lives);h.classList.add('shake');setTimeout(()=>h.classList.remove('shake'),350);renderLives();updateSubHud();seLifeLost();flash('rgba(255,60,110,0.28)');if(G.lives<=0){setTimeout(()=>endGame('MISS3'),300);return true;}return false;}
 function stopTimer(){clearInterval(G.timerInterval);G.timerInterval=null;}
 function startTimer(){
   stopTimer();G.timerStart=Date.now();
@@ -538,8 +559,7 @@ function startTimer(){
     ggEl.style.color=gg>=2?'var(--ac2)':gg>=1.5?'var(--ac4)':'var(--td)';
     if(pct<25&&e-G.lastDangerTick>450){G.lastDangerTick=e;seTick();}
     if(e>=TURN_MS){stopTimer();if(G.active)endGame('TIMEOUT');}
-    // ミニHUDも更新
-    updateMiniHud(pct);
+    const stb=el('sub-tmr-bar');if(stb){stb.style.width=pct+'%';stb.style.background=pct<25?'var(--ac2)':pct<45?'var(--ac3)':'var(--ac)';}
   },TICK_MS);
 }
 function goCountdown(){
@@ -565,9 +585,7 @@ function startGame(){
   el('status-row').textContent='';el('status-row').className='status-row';
   el('gg-val').style.opacity='0';
   el('tmr-wrap').style.opacity='1';el('tmr-sec').style.opacity='1';
-  // ミニHUD初期化
-  updateMiniHudStatic();
-  renderLives();
+  renderLives();updateSubHud();
   showScreen('s-game');
   setTimeout(()=>{inp.focus();startTimer();},80);
 }
@@ -587,8 +605,7 @@ async function submit(){
   const lc=lastChar(word);G.usedWords.add(word);G.totalWords++;G.recent=[word,...G.recent].slice(0,8);if(word.length>G.maxLen)G.maxLen=word.length;
   if(lc==='ん'){addChip(word,'dead');G.active=false;G.submitting=false;seOver();shakeApp();flash('rgba(255,60,110,0.3)');setTimeout(()=>endGame('N_ENDING'),350);return;}
   G.combo++;const pts=calcScore(elapsed,word.length,G.combo);G.score+=pts;if(G.combo>G.maxCombo)G.maxCombo=G.combo;
-  el('g-score').textContent=G.score;const cEl=el('g-combo');cEl.textContent=G.combo;cEl.classList.remove('pop');void cEl.offsetWidth;cEl.classList.add('pop');
-  updateMiniHudStatic();
+  el('g-score').textContent=G.score;const cEl=el('g-combo');cEl.textContent=G.combo;cEl.classList.remove('pop');void cEl.offsetWidth;cEl.classList.add('pop');updateSubHud();
   const gg=ggMult(elapsed),lb=lenBonus(word.length);
   if(gg>=2.5){showFbPop('GIRIGIRI!!','fb-gg');seGG();burst('gg');flash('rgba(191,136,255,0.22)');}
   else if(lb>=9){showFbPop(`${word.length}文字 +${lb}pt`,'fb-long');seLong(word.length);burst('long');flash('rgba(255,204,0,0.18)');}
@@ -597,8 +614,7 @@ async function submit(){
   if(G.combo===5){showMilestone('5 COMBO!  ×1.2','#ffcc00');seMs(1);burst('ms');}
   else if(G.combo===10){showMilestone('10 COMBO!!  ×1.5','#00f5c8');seMs(2);burst('ms');}
   else if(G.combo===20){showMilestone('20 COMBO!!!  ×2.0','#ff88ff');seMs(3);burst('ms');}
-  G.currentChar=lc;const ch=el('cur-char');ch.textContent=lc;ch.classList.remove('changed');void ch.offsetWidth;ch.classList.add('changed');
-  if(el('mini-char'))el('mini-char').textContent=lc;
+  G.currentChar=lc;const ch=el('cur-char');ch.textContent=lc;ch.classList.remove('changed');void ch.offsetWidth;ch.classList.add('changed');if(el('sub-char'))el('sub-char').textContent=lc;
   el('last-word').innerHTML=`前の言葉: <b>${word}</b> <span style="font-size:10px;color:var(--ac3);">+${pts}pt</span>`;
   addChip(word,'');inp.value='';G.submitting=false;startTimer();inp.focus();
 }
@@ -619,44 +635,10 @@ function endGame(r){
 }
 function doShare(){const best=getBest();const txt=`無限しりとり🔥\n${G.totalWords}連鎖！スコア: ${G.score}${G.score>=best&&G.score>0?' 🏆自己ベスト！':''}\n最大コンボ: ${G.maxCombo} / 最長: ${G.maxLen}文字\nお前らこれ超えられる？\n${location.href}\n#無限しりとり`;window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(txt),'_blank','noopener');}
 
-/* ===== MINI HUD（スマホ入力中の上部情報バー） ===== */
-function updateMiniHudStatic(){
-  const mh=el('mini-hud');if(!mh)return;
-  el('mini-score').textContent=G.score;
-  el('mini-combo').textContent=G.combo;
-  el('mini-char').textContent=G.currentChar||'ー';
-  // ハート
-  let hearts='';
-  for(let i=0;i<MAX_LIVES;i++) hearts += i<G.lives ? '❤️' : '🖤';
-  el('mini-hearts').textContent=hearts;
-}
-function updateMiniHud(pct){
-  const mf=el('mini-timer-fill');if(!mf)return;
-  mf.style.width=pct+'%';
-  mf.style.background=pct<25?'var(--ac2)':pct<45?'var(--ac3)':'var(--ac)';
-}
-// iOSでキーボードが出るとvisualViewportが縮む → それを検知してミニHUDを表示
-function setupMiniHud(){
-  if(!window.visualViewport)return;
-  const onResize=()=>{
-    if(!G.active){el('mini-hud').style.display='none';return;}
-    const vvh=window.visualViewport.height;
-    const wh=window.innerHeight;
-    // キーボードが出て画面が150px以上縮んだらミニHUD表示
-    const kbOut=wh-vvh>150;
-    el('mini-hud').style.display=kbOut?'block':'none';
-    // ミニHUD表示中は game-bottom を少し上にずらす（キーボードと被らない）
-    const gb=document.querySelector('.game-bottom');
-    if(gb) gb.style.paddingBottom=kbOut?'0':'';
-  };
-  window.visualViewport.addEventListener('resize',onResize);
-  window.visualViewport.addEventListener('scroll',onResize);
-}
 
 window.addEventListener('load',()=>{
   try{if(localStorage.getItem('sm')==='1'){MUTED=true;el('mute-btn').textContent='🔇';}}catch(e){}
   updateTitleBest();
-  setupMiniHud();
   loadExtDict();
 });
 </script>
