@@ -14,12 +14,18 @@ body{
   font-family:sans-serif;
 }
 
+/* モバイル修正 */
 #app{
   height:100dvh;
   display:flex;
   flex-direction:column;
-  justify-content:center;
   align-items:center;
+  justify-content:center;
+}
+
+#score{
+  font-size:32px;
+  margin-bottom:20px;
 }
 
 input{
@@ -43,70 +49,65 @@ let G = {
   submitting:false,
   timerStart:Date.now(),
   score:0,
-  lastChar:""
+  chain:0
 };
 
+// 辞書
 let LOCAL_DICT = new Set();
-let CACHE = new Map(); // ←追加（最強）
+const WORD_CACHE = new Map();
 
-// --------------------
-// 辞書ロード
-// --------------------
+// 読み込み
 fetch("words.txt")
 .then(r=>r.text())
 .then(t=>{
   LOCAL_DICT = new Set(t.split("\n"));
 });
 
-// --------------------
-// 辞書チェック（最適化）
-// --------------------
-async function checkWord(word){
+// ----------------
+// 辞書チェック（最適化版）
+// ----------------
+async function checkDict(word){
 
-  // キャッシュ
-  if(CACHE.has(word)) return CACHE.get(word);
+  if(WORD_CACHE.has(word)){
+    return WORD_CACHE.get(word);
+  }
 
-  // ローカル
   if(LOCAL_DICT.has(word)){
-    CACHE.set(word,true);
+    WORD_CACHE.set(word,true);
     return true;
   }
 
-  // 外部（非同期で裏チェック）
+  // 外部チェックは待たない
   checkExternal(word);
 
-  CACHE.set(word,false);
+  WORD_CACHE.set(word,false);
   return false;
 }
 
-// 外部辞書（裏でだけ使う）
 async function checkExternal(word){
   try{
     const res = await fetch(
       "https://ja.wiktionary.org/w/api.php?action=query&titles="+word+"&format=json&origin=*"
     );
     const json = await res.json();
-
     const exists = Object.values(json.query.pages)[0].missing === undefined;
 
     if(exists){
-      CACHE.set(word,true);
+      WORD_CACHE.set(word,true);
     }
-
   }catch(e){}
 }
 
-// --------------------
+// ----------------
 // タイマー
-// --------------------
+// ----------------
 function loop(){
   if(!G.active) return;
 
   const e = Date.now() - G.timerStart;
 
   if(e >= TURN_MS){
-    if(G.submitting) return; // ←フリーズ防止
-
+    if(G.submitting) return; // フリーズ防止
     endGame();
     return;
   }
@@ -115,43 +116,81 @@ function loop(){
 }
 loop();
 
-// --------------------
-// submit
-// --------------------
+// ----------------
+// エフェクト
+// ----------------
+function showEffect(text){
+  const el = document.createElement("div");
+  el.innerText = text;
+  el.style.position = "fixed";
+  el.style.top = "40%";
+  el.style.left = "50%";
+  el.style.transform = "translate(-50%,-50%)";
+  el.style.fontSize = "28px";
+  el.style.opacity = "1";
+  el.style.transition = "0.5s";
+
+  document.body.appendChild(el);
+
+  setTimeout(()=>{ el.style.opacity = "0"; },50);
+  setTimeout(()=>{ el.remove(); },500);
+}
+
+// ----------------
+// 入力
+// ----------------
 const inp = document.getElementById("inp");
+
+inp.addEventListener("focus", () => {
+  setTimeout(()=>window.scrollTo(0,0),100);
+});
 
 inp.addEventListener("keydown", async (e)=>{
   if(e.key !== "Enter") return;
 
   if(!G.active || G.submitting) return;
 
-  G.submitting = true; // ←先に
+  G.submitting = true; // ←先に（重要）
 
   const word = inp.value.trim();
   inp.value = "";
   inp.disabled = true;
 
   try{
+    const elapsed = Date.now() - G.timerStart;
 
-    const ok = await checkWord(word);
+    const ok = await checkDict(word);
 
     if(!G.active) return;
 
     if(!ok){
       alert("存在しない！");
+      G.chain = 0;
       return;
     }
 
-    // スコア（長さ＋ギリギリボーナス）
-    const elapsed = Date.now() - G.timerStart;
-    const timeBonus = Math.max(0, (TURN_MS - elapsed));
+    // スコア
+    const remain = TURN_MS - elapsed;
 
-    const add = word.length * 10 + Math.floor(timeBonus/10);
+    const lenBonus = word.length * 10;
+    const timeBonus = Math.floor(remain/10);
+
+    G.chain++;
+    const chainBonus = G.chain * 2;
+
+    const add = lenBonus + timeBonus + chainBonus;
 
     G.score += add;
+
     document.getElementById("score").innerText = G.score;
 
-    // 次ターン
+    // ギリギリ演出
+    if(remain < 300){
+      showEffect("神回避🔥");
+    } else if(remain < 800){
+      showEffect("あぶねぇ！");
+    }
+
     G.timerStart = Date.now();
 
   } finally {
@@ -161,22 +200,23 @@ inp.addEventListener("keydown", async (e)=>{
   }
 });
 
-// --------------------
-// 終了
-// --------------------
+// ----------------
+// 終了（バズ仕様）
+// ----------------
 function endGame(){
   G.active = false;
 
-  setTimeout(()=>{
-    const text =
+  const text =
 `【しりとりスコアアタック】
-🔥 ${G.score}点
+🔥 ${G.score}点 / ${G.chain}連鎖
 
+ギリギリ耐えたｗ
 これ超えられる？`;
 
-    const url =
+  const url =
 "https://twitter.com/intent/tweet?text=" + encodeURIComponent(text);
 
+  setTimeout(()=>{
     window.open(url);
   },300);
 }
